@@ -1766,11 +1766,6 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
 
     if (stream == AUDIO_STREAM_TTS) {
         *flags = AUDIO_OUTPUT_FLAG_TTS;
-    } else if (stream == AUDIO_STREAM_VOICE_CALL &&
-               audio_is_linear_pcm(config->format)) {
-        *flags = (audio_output_flags_t)(AUDIO_OUTPUT_FLAG_VOIP_RX |
-                                       AUDIO_OUTPUT_FLAG_DIRECT);
-        ALOGV("Set VoIP and Direct output flags for PCM format");
     } else if (device == AUDIO_DEVICE_OUT_TELEPHONY_TX &&
         stream == AUDIO_STREAM_MUSIC &&
         audio_is_linear_pcm(config->format) &&
@@ -2128,9 +2123,14 @@ status_t AudioPolicyManagerCustom::startInput(audio_io_handle_t input,
                         return INVALID_OPERATION;
                     }
                 } else {
-                    ALOGV("startInput(%d) failed for HOTWORD: other input %d already started",
-                          input, activeDesc->mIoHandle);
-                    return INVALID_OPERATION;
+                    if (property_get_bool("persist.vendor.audio.sva.conc.enabled", false)) {
+                        ALOGD("startInput(%d) allow concurrent HOTWORD recording with other input %d",
+                              input, activeDesc->mIoHandle);
+                    } else {
+                        ALOGV("startInput(%d) failed for HOTWORD: other input %d already started",
+                              input, activeDesc->mIoHandle);
+                        return INVALID_OPERATION;
+                    }
                 }
             } else {
                 if (activeSource != AUDIO_SOURCE_HOTWORD) {
@@ -2154,7 +2154,8 @@ status_t AudioPolicyManagerCustom::startInput(audio_io_handle_t input,
             }
 
             audio_source_t activeSource = activeDesc->inputSource(true);
-            if (activeSource == AUDIO_SOURCE_HOTWORD) {
+            if ((activeSource == AUDIO_SOURCE_HOTWORD) &&
+                !(property_get_bool("persist.vendor.audio.sva.conc.enabled", false))) {
                 AudioSessionCollection activeSessions =
                         activeDesc->getAudioSessions(true /*activeOnly*/);
                 audio_session_t activeSession = activeSessions.keyAt(0);
@@ -2247,8 +2248,9 @@ status_t AudioPolicyManagerCustom::startInput(audio_io_handle_t input,
                 if (property_get_bool("persist.vendor.audio.va_concurrency_enabled", false)) {
                     if (activeNonSoundTriggerInputsCountOnDevices(primaryInputDevices) == 1)
                         SoundTrigger::setCaptureState(true);
-                } else if (mInputs.activeInputsCountOnDevices(primaryInputDevices) == 1)
+                } else if (mInputs.activeInputsCountOnDevices(primaryInputDevices) == 1) {
                     SoundTrigger::setCaptureState(true);
+                }
             }
 
             // automatically enable the remote submix output when input is started if not
