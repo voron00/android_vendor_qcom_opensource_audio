@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2019 The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2009 The Android Open Source Project
@@ -1461,6 +1461,8 @@ status_t AudioPolicyManagerCustom::getOutputForAttr(const audio_attributes_t *at
         } else {
             ALOGI("%s:: attribute is NULL .. no usage set", __func__);
         }
+    } else if (tConfig.offload_info.channel_mask == AUDIO_CHANNEL_NONE) {
+        tConfig.offload_info.channel_mask = config->channel_mask;
     }
 
     return AudioPolicyManager::getOutputForAttr(attr, output, session, stream,
@@ -1789,6 +1791,13 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
     if (((*flags & AUDIO_OUTPUT_FLAG_DIRECT) == 0) &&
             audio_is_linear_pcm(config->format) && config->sample_rate <= SAMPLE_RATE_HZ_MAX &&
             audio_channel_count_from_out_mask(config->channel_mask) <= 2) {
+        goto non_direct_output;
+    }
+
+    if (property_get_bool("vendor.audio.pcm.direct.disable", false /* default_value */) &&
+                audio_is_linear_pcm(config->format)) {
+        ALOGD(":%s Force route mch pcm to deep buffer", __func__);
+        forced_deep = true;
         goto non_direct_output;
     }
 
