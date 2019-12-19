@@ -82,6 +82,16 @@ public:
 
         virtual ~AudioPolicyManagerCustom() {}
 
+        // when a device is connected, checks if an open output can be routed
+        // to this device. If none is open, tries to open one of the available outputs.
+        // Returns an output suitable to this device or 0.
+        // when a device is disconnected, checks if an output is not used any more and
+        // returns its handle if any.
+        // transfers the audio tracks and effects from one output thread to another accordingly.
+        virtual status_t checkOutputsForDevice(const sp<DeviceDescriptor>& devDesc,
+                                       audio_policy_dev_state_t state,
+                                       SortedVector<audio_io_handle_t>& outputs,
+                                       const String8& address);
         status_t setDeviceConnectionStateInt(audio_devices_t device,
                                           audio_policy_dev_state_t state,
                                           const char *device_address,
