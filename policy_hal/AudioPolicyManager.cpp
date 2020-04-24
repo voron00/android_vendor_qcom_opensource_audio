@@ -199,8 +199,10 @@ status_t AudioPolicyManagerCustom::checkOutputsForDevice(const sp<DeviceDescript
                 // Here is where the out_set_parameters() for card & device gets called
                 if (!address.isEmpty()) {
                     char *param = audio_device_address_to_parameter(device, address);
-                    mpClientInterface->setParameters(output, String8(param));
-                    free(param);
+                    if (param != NULL) {
+                        mpClientInterface->setParameters(output, String8(param));
+                        free(param);
+                    }
                 }
                 updateAudioProfiles(device, output, profile->getAudioProfiles());
                 if (!profile->hasValidAudioProfile()) {
