@@ -780,6 +780,12 @@ bool AudioPolicyManagerCustom::isOffloadSupported(const audio_offload_info_t& of
         return false;
     }
 
+    //check if it's VORBIS (offload not working)
+    if (((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_VORBIS)) {
+        ALOGD("offload disabled for VORBIS format");
+        return false;
+    }
+
     //check if it's multi-channel AAC (includes sub formats) and FLAC format
     if ((popcount(offloadInfo.channel_mask) > 2) &&
         (((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AAC) ||
